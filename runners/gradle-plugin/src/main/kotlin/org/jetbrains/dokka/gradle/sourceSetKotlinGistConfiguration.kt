@@ -1,5 +1,8 @@
+@file:Suppress("UnstableApiUsage")
+
 package org.jetbrains.dokka.gradle
 
+import org.jetbrains.dokka.Platform
 import org.jetbrains.dokka.gradle.kotlin.KotlinSourceSetGist
 import org.jetbrains.dokka.gradle.kotlin.gistOf
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
@@ -17,8 +20,16 @@ internal fun GradleDokkaSourceSetBuilder.configureWithKotlinSourceSetGist(source
 
     this.sourceRoots.from(sourceSet.sourceRoots)
     this.classpath.from(sourceSet.classpath)
-    this.platform by sourceSet.platform.name
+    this.platform by Platform.fromString(sourceSet.platform.name)
     this.dependentSourceSets.set(dependentSourceSetIds)
+    this.displayName by sourceSet.name.substringBeforeLast(
+        delimiter = "Main",
+        missingDelimiterValue = sourceSet.platform.name
+    )
 }
 
-
+internal fun sourceSetDisplayName(
+    sourceSetName: String, platform: Platform
+): String {
+    TODO()
+}

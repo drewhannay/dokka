@@ -13,14 +13,12 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.*
 import org.gradle.kotlin.dsl.listProperty
-import org.gradle.kotlin.dsl.property
 import org.gradle.kotlin.dsl.setProperty
 import org.gradle.util.ConfigureUtil
 import org.jetbrains.dokka.*
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import java.io.File
 import java.net.URL
-import org.jetbrains.kotlin.gradle.model.SourceSet as KotlinModelSourceSet
 
 internal fun Task.GradleDokkaSourceSetBuilderFactory(): (name: String) -> GradleDokkaSourceSetBuilder =
     { name -> GradleDokkaSourceSetBuilder(name, project) }
@@ -98,34 +96,31 @@ open class GradleDokkaSourceSetBuilder constructor(
 
     @Input
     @Optional
-    val languageVersion: Property<String?> = project.objects.safeProperty<String>()
+    val languageVersion: Property<String?> = project.objects.safeProperty()
 
     @Input
     @Optional
     val apiVersion: Property<String?> = project.objects.safeProperty()
 
     @Input
-    val noStdlibLink: Property<Boolean> = project.objects.property<Boolean>()
-        .convention(DokkaDefaults.noStdlibLink)
+    val noStdlibLink: Property<Boolean> = project.objects.safeProperty<Boolean>()
+        .safeConvention(DokkaDefaults.noStdlibLink)
 
     @Input
-    val noJdkLink: Property<Boolean> = project.objects.property<Boolean>()
-        .convention(DokkaDefaults.noJdkLink)
+    val noJdkLink: Property<Boolean> = project.objects.safeProperty<Boolean>()
+        .safeConvention(DokkaDefaults.noJdkLink)
 
     @Input
-    val noAndroidSdkLink: Property<Boolean> = project.objects.property<Boolean>()
-        .convention(false)
+    val noAndroidSdkLink: Property<Boolean> = project.objects.safeProperty<Boolean>()
+        .safeConvention(false)
 
     @InputFiles
     val suppressedFiles: ConfigurableFileCollection = project.files()
 
     @Input
     @Optional
-    val analysisPlatform: Property<Platform?> = project.objects.safeProperty()
-
-    @Input
-    @Optional
-    val platform: Property<String?> = project.objects.safeProperty()
+    val platform: Property<Platform> = project.objects.safeProperty<Platform>()
+        .safeConvention(Platform.DEFAULT)
 
     fun DokkaSourceSetID(sourceSetName: String): DokkaSourceSetID {
         return DokkaSourceSetID(project, sourceSetName)
@@ -163,7 +158,7 @@ open class GradleDokkaSourceSetBuilder constructor(
         sourceRoot(project.file(path))
     }
 
-    fun sourceLink(c: Closure<Unit>) {
+    fun sourceLink(c: Closure<in GradleSourceLinkBuilder>) {
         val configured = ConfigureUtil.configure(c, GradleSourceLinkBuilder(project))
         sourceLinks.add(configured)
     }
@@ -174,7 +169,7 @@ open class GradleDokkaSourceSetBuilder constructor(
         sourceLinks.add(sourceLink)
     }
 
-    fun perPackageOption(c: Closure<Unit>) {
+    fun perPackageOption(c: Closure<in GradlePackageOptionsBuilder>) {
         val configured = ConfigureUtil.configure(c, GradlePackageOptionsBuilder(project))
         perPackageOptions.add(configured)
     }
@@ -185,7 +180,7 @@ open class GradleDokkaSourceSetBuilder constructor(
         perPackageOptions.add(option)
     }
 
-    fun externalDocumentationLink(c: Closure<Unit>) {
+    fun externalDocumentationLink(c: Closure<in GradleExternalDocumentationLinkBuilder>) {
         val link = ConfigureUtil.configure(c, GradleExternalDocumentationLinkBuilder(project))
         externalDocumentationLinks.add(link)
     }
@@ -197,12 +192,7 @@ open class GradleDokkaSourceSetBuilder constructor(
     }
 
     fun externalDocumentationLink(url: String, packageListUrl: String? = null) {
-        externalDocumentationLinks.add(
-            GradleExternalDocumentationLinkBuilder(project).apply {
-                this.url by URL(url)
-                this.packageListUrl by URL(packageListUrl)
-            }
-        )
+        externalDocumentationLink(URL(url), packageListUrl = packageListUrl?.let(::URL))
     }
 
     fun externalDocumentationLink(url: URL, packageListUrl: URL? = null) {
